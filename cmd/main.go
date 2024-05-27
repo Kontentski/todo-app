@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/Kontentski/todo-app/internal/handlers"
 	"github.com/Kontentski/todo-app/internal/storage"
@@ -10,7 +11,12 @@ import (
 )
 
 func main() {
-	store := storage.NewMemoryStore()
+	dsn := os.Getenv("DATABASE_URL")
+	store, err := storage.NewPostgresStorage(dsn)
+	if err != nil {
+		log.Fatal("failed to connect to database", err)
+	}
+
 	handler := &handlers.TodoHandler{Storage: store}
 	e := echo.New()
 	e.Use(middleware.Logger())

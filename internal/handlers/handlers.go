@@ -10,7 +10,7 @@ import (
 )
 
 type TodoHandler struct {
-	Storage *storage.MemoryStore
+	Storage *storage.PostgresStore
 }
 
 func (h *TodoHandler) GetTasks(c echo.Context) error {
