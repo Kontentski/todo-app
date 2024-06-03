@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"log"
 
 	"github.com/Kontentski/todo-app/internal/models"
 	_ "github.com/lib/pq"
@@ -18,7 +19,12 @@ func NewPostgresStorage(connectionString string) (*PostgresStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	db.AutoMigrate(&models.Todo{})
+	err = db.AutoMigrate(&models.Todo{})
+	if err != nil {
+		return nil, err
+	}
+
+	log.Println("Database connection and migration successful")
 	return &PostgresStore{DB: db}, nil
 }
 

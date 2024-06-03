@@ -7,6 +7,8 @@ import (
 	"github.com/Kontentski/todo-app/internal/models"
 )
 
+//depricated ;)
+
 type MemoryStore struct {
 	mu     sync.Mutex
 	todos  map[int64]*models.Todo
@@ -63,7 +65,7 @@ func (s *MemoryStore) Update(id int64, updated models.Todo) error {
 	if updated.Title != "" {
 		todo.Title = updated.Title
 	}
-	todo.Completed = updated.Completed
+	todo.Complete = updated.Complete
 	return nil
 }
 
