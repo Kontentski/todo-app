@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const supabaseUrl = 'https://mkfqpkulqicuhpawsmsk.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rZnFwa3VscWljdWhwYXdzbXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTY5ODA5ODksImV4cCI6MjAzMjU1Njk4OX0.J3OhpYNObgzHAliz9pQhsOzH0k-lS6cm0qFfzkqGXOg';
+
     const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
     async function signInWithGoogle() {
