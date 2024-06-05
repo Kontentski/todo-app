@@ -39,6 +39,12 @@ func (s *PostgresStore) GetAll() []models.Todo {
 	return todos
 }
 
+func (s *PostgresStore) GetByUserID(userID string) []models.Todo {
+	var todos []models.Todo
+	s.DB.Where("user_id = ?", userID).Find(&todos)
+	return todos
+}
+
 func (s *PostgresStore) GetByID(id int64) (*models.Todo, error) {
 	var todo models.Todo
 	result := s.DB.First(&todo, id)
@@ -48,24 +54,34 @@ func (s *PostgresStore) GetByID(id int64) (*models.Todo, error) {
 	return &todo, nil
 }
 
-func (s *PostgresStore) Update(id int64, updated models.Todo) error {
-	result := s.DB.Model(&models.Todo{}).Where("id = ?", id).Select("title","completed").Updates(updated)
+func (s *PostgresStore) GetByIDAndUserID(id int64, userID string) (*models.Todo, error) {
+	var todo models.Todo
+	result := s.DB.Where("id = ? AND user_id = ?", id, userID).First(&todo)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &todo, nil
+}
+
+func (s *PostgresStore) Update(id int64, updated models.Todo, userID string) error {
+	result := s.DB.Model(&models.Todo{}).Select("title","complete").Where("id = ? AND user_id = ?", id, userID).Updates(updated)
 	if result.Error != nil {
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return errors.New("task not found")
+		return errors.New("task not found or not authorized")
 	}
 	return nil
 }
 
-func (s *PostgresStore) Delete(id int64) error {
-	result := s.DB.Delete(&models.Todo{}, id)
+func (s *PostgresStore) Delete(id int64, userID string) error {
+	result := s.DB.Where("id = ? AND user_id = ?", id, userID).Delete(&models.Todo{})
 	if result.Error != nil {
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return errors.New("task not found")
+		return errors.New("task not found or not authorized")
 	}
 	return nil
 }
+

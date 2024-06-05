@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo App</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="app.js" defer></script>
+</head>
+<body>
+    <h1>Todo App</h1>
+    <div id="auth">
+        <button id="sign-in-button" onclick="signInWithGoogle()">Sign In with Google</button>
+    </div>
+    <div id="tasks" style="display:none;">
+        <h2>Your Tasks</h2>
+        <ul id="task-list"></ul>
+        <form id="create-task-form">
+            <input type="text" id="new-task-title" placeholder="New task title" required>
+            <button type="submit">Create Task</button>
+        </form>
+        <button onclick="signOut()">Sign Out</button>
+    </div>
+</body>
+</html>
