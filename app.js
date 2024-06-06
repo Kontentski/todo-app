@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+
     const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
     async function signInWithGoogle() {
