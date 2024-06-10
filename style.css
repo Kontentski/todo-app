@@ -1,0 +1,43 @@
+.tasks {
+    white-space: pre-wrap; /* Preserve spaces and line breaks  */
+  }
+  body {
+    background: linear-gradient(to right, #605e5e 1%, #093040);
+    height: 100vh;
+    margin: 0;
+    position: relative;
+  }
+  h1 {
+      padding-top: 30px;
+      color: #FFDFDB;
+      font-size: 80px;
+      text-align: center;
+  }
+  .sign-in-image{
+    cursor: pointer;
+
+  }
+  .signoutbtn{
+      display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-family: 'Roboto', sans-serif;
+          font-weight: 500;
+          font-size: 14px;
+          height: 40px;
+          color: #000000;
+          background-color: #EEEEEE;
+          border: 1px solid #dcdcdc;
+          border-radius: 50px;
+          box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.2);
+          padding: 0 16px;
+          cursor: pointer;
+          transition: background-color 0.3s ease;
+  
+  }
+  
+  
+  @media only screen and (max-width: 600px){
+  h1{font-size: 50px;}
+  }
+  
