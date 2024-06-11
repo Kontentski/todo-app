@@ -4,19 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Todo App</title>
-
+    <link rel="stylesheet" type="text/css" href="style.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <script src="app.js" defer></script>
 
-    <link rel="stylesheet" type="text/css" href="style.css" />
+
   </head>
   <body>
       <h1>Todo list</h1>
       
     <div id="tasks" style="display: none">
-      <h2>Your Tasks</h2>
-      <ul id="task-list" class="tasks"></ul>
-      <form id="create-task-form">
+      <form id="create-task-form" class="form">
         <input
           type="text"
           id="new-task-title"
@@ -25,8 +23,10 @@
         />
         <button type="submit">Create Task</button>
       </form>
+      <ul id="task-list" class="list"></ul>
       
-      <div id="auth" style="display: none">
+      <footer>
+        <div id="auth" style="display: none">
         <img
           id="sign-in-image"
           src="login.svg"
@@ -34,9 +34,10 @@
           onclick="signInWithGoogle()"
         />
       </div>
-      <div id="signout" style="display: none">
+      <div id="signout"  style="display: none">
         <button class="signoutbtn" onclick="signOut()">Sign Out</button>
       </div>
+      </footer>
     </div>
   </body>
 </html>

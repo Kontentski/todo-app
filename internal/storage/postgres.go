@@ -46,13 +46,13 @@ func (s *PostgresStore) Create(todo models.Todo) models.Todo {
 
 func (s *PostgresStore) GetAll() []models.Todo {
 	var todos []models.Todo
-	s.DB.Order("id asc").Find(&todos)
+	s.DB.Order("created_at asc").Find(&todos)
 	return todos
 }
 
 func (s *PostgresStore) GetByUserID(userID string) []models.Todo {
 	var todos []models.Todo
-	s.DB.Where("user_id = ?", userID).Order("id asc").Find(&todos)
+	s.DB.Where("user_id = ?", userID).Order("created_at asc").Find(&todos)
 	return todos
 }
 

@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
-
+  const supabaseUrl = "https://mkfqpkulqicuhpawsmsk.supabase.co";
+  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rZnFwa3VscWljdWhwYXdzbXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTY5ODA5ODksImV4cCI6MjAzMjU1Njk4OX0.J3OhpYNObgzHAliz9pQhsOzH0k-lS6cm0qFfzkqGXOg";
   const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
   console.log("DOM fully loaded and parsed");
@@ -20,85 +21,87 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!token) {
       console.log("No token found, fetching local tasks");
       let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
-      const taskList = document.getElementById("task-list");
-      taskList.innerHTML = "";
-      tasks.forEach((task, index) => {
-        const listItem = document.createElement("li");
-
-        const taskTitle = document.createElement("span");
-        taskTitle.textContent = task.title;
-
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.checked = task.complete;
-        checkbox.addEventListener("change", () => {
-          tasks[index].complete = checkbox.checked;
-          localStorage.setItem("tasks", JSON.stringify(tasks)); // Update local storage
-        });
-
-        const editButton = document.createElement("button");
-        editButton.textContent = "Edit";
-        editButton.addEventListener("click", () => {
-          editTask(task.id, task.title);
-        });
-
-        const deleteButton = document.createElement("button");
-        deleteButton.textContent = "delete";
-        deleteButton.addEventListener("click", () => {
-          deleteTask(task.id);
-        });
-
-        listItem.appendChild(checkbox);
-        listItem.appendChild(taskTitle);
-        listItem.appendChild(editButton);
-        listItem.appendChild(deleteButton);
-        taskList.appendChild(listItem);
-      });
+      renderTasks(tasks);
       return;
     }
 
-    const response = await fetch("/api/tasks", {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (response.ok) {
-      const tasks = await response.json();
-      const taskList = document.getElementById("task-list");
-      taskList.innerHTML = "";
-
-      tasks.forEach((task) => {
-        const listItem = document.createElement("li");
-
-        const taskTitle = document.createElement("span");
-        taskTitle.textContent = task.title;
-
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.checked = task.complete;
-        checkbox.addEventListener("change", () => {
-          updateTaskCompletion(task.id, task.title, checkbox.checked);
-        });
-        const editButton = document.createElement("button");
-        editButton.textContent = "Edit";
-        editButton.addEventListener("click", () => {
-          editTask(task.id, task.title);
-        });
-
-        const deleteButton = document.createElement("button");
-        deleteButton.textContent = "Delete";
-        deleteButton.addEventListener("click", () => {
-          deleteTask(task.id);
-        });
-        listItem.appendChild(checkbox);
-        listItem.appendChild(taskTitle);
-        listItem.appendChild(editButton);
-        listItem.appendChild(deleteButton);
-        taskList.appendChild(listItem);
+    try {
+      const response = await fetch("/api/tasks", {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
       });
-    } else {
-      console.error("Error fetching tasks:", await response.text());
+
+      if (response.ok) {
+        const tasks = await response.json();
+        renderTasks(tasks);
+      } else if (response.status === 401) {
+        console.error("Token is expired");
+        await handleTokenRefresh();
+      } else {
+        console.error("Error fetching tasks:", await response.text());
+      }
+    } catch (error) {
+      console.error("Fetch tasks error:", error);
     }
+  }
+
+  async function handleTokenRefresh() {
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.refreshSession();
+    if (error) {
+      console.error("Error refreshing session:", error);
+      await signOut();
+    } else if (session) {
+      localStorage.setItem("token", session.access_token);
+      await fetchTasks();
+    }
+  }
+
+  function renderTasks(tasks) {
+    const taskList = document.getElementById("task-list");
+    taskList.innerHTML = "";
+
+    tasks.forEach((task) => {
+      const listItem = document.createElement("li");
+
+      const taskTitle = document.createElement("span");
+      taskTitle.className = "task-title";
+      taskTitle.textContent = task.title;
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = task.complete;
+      checkbox.addEventListener("change", () => {
+        updateTaskCompletion(task.id, task.title, checkbox.checked);
+      });
+
+      const taskActions = document.createElement("div");
+      taskActions.className = "task-actions";
+
+      const editButton = document.createElement("button");
+      editButton.className = "task-button edit";
+      editButton.textContent = "";
+      editButton.addEventListener("click", () => {
+        editTask(task.id, task.title);
+      });
+
+      const deleteButton = document.createElement("button");
+      deleteButton.className = "task-button delete";
+      deleteButton.textContent = "";
+      deleteButton.addEventListener("click", () => {
+        deleteTask(task.id);
+      });
+
+      taskActions.appendChild(editButton);
+      taskActions.appendChild(deleteButton);
+
+      listItem.appendChild(checkbox);
+      listItem.appendChild(taskTitle);
+      listItem.appendChild(taskActions);
+      taskList.appendChild(listItem);
+    });
   }
 
   async function createTask(title, complete = false) {
@@ -108,23 +111,27 @@ document.addEventListener("DOMContentLoaded", () => {
       const id = IDgenerator();
       tasks.push({ id, title, complete });
       localStorage.setItem("tasks", JSON.stringify(tasks));
-      fetchTasks(); // Refresh the task list after creating a new task
+      fetchTasks(); 
       return;
     }
 
-    const response = await fetch("/api/tasks", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ title, complete }),
-    });
+    try {
+      const response = await fetch("/api/tasks", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title, complete }),
+      });
 
-    if (response.ok) {
-      fetchTasks();
-    } else {
-      console.error("Error creating task:", await response.text());
+      if (response.ok) {
+        fetchTasks();
+      } else {
+        console.error("Error creating task:", await response.text());
+      }
+    } catch (error) {
+      console.error("Create task error:", error);
     }
   }
 
@@ -135,21 +142,33 @@ document.addEventListener("DOMContentLoaded", () => {
   async function updateTaskCompletion(id, title, complete) {
     const token = localStorage.getItem("token");
     if (!token) {
-      console.error("No token found");
+      let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+      const index = tasks.findIndex((task) => task.id === id);
+      if (index !== -1) {
+        tasks[index].complete = complete;
+        localStorage.setItem("tasks", JSON.stringify(tasks));
+        fetchTasks(); // Refresh the task list after updating the task
+      }
       return;
     }
-
-    const response = await fetch(`/api/tasks/${id}`, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ title, complete }),
-    });
-
-    if (!response.ok) {
-      console.error("Error updating task:", await response.text());
+  
+    try {
+      const response = await fetch(`/api/tasks/${id}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title, complete }),
+      });
+  
+      if (!response.ok) {
+        console.error("Error updating task:", await response.text());
+      } else {
+        fetchTasks(); // Refresh the task list after updating the task
+      }
+    } catch (error) {
+      console.error("Update task error:", error);
     }
   }
 
@@ -172,19 +191,23 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const response = await fetch(`/api/tasks/${id}`, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ title: newTitle }),
-    });
+    try {
+      const response = await fetch(`/api/tasks/${id}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title: newTitle }),
+      });
 
-    if (response.ok) {
-      fetchTasks(); // Refresh the task list after editing the task
-    } else {
-      console.error("Error editing task:", await response.text());
+      if (response.ok) {
+        fetchTasks(); // Refresh the task list after editing the task
+      } else {
+        console.error("Error editing task:", await response.text());
+      }
+    } catch (error) {
+      console.error("Edit task error:", error);
     }
   }
 
@@ -199,17 +222,21 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const response = await fetch(`/api/tasks/${id}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    try {
+      const response = await fetch(`/api/tasks/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    if (response.ok) {
-      fetchTasks();
-    } else {
-      console.error("Error deleting task:", await response.text());
+      if (response.ok) {
+        fetchTasks();
+      } else {
+        console.error("Error deleting task:", await response.text());
+      }
+    } catch (error) {
+      console.error("Delete task error:", error);
     }
   }
 
@@ -220,17 +247,21 @@ document.addEventListener("DOMContentLoaded", () => {
     let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
     for (let task of tasks) {
       delete task.id;
-      const response = await fetch("/api/tasks", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(task),
-      });
+      try {
+        const response = await fetch("/api/tasks", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(task),
+        });
 
-      if (!response.ok) {
-        console.error("Error syncing task:", await response.text());
+        if (!response.ok) {
+          console.error("Error syncing task:", await response.text());
+        }
+      } catch (error) {
+        console.error("Sync task error:", error);
       }
     }
     localStorage.removeItem("tasks");
@@ -249,6 +280,7 @@ document.addEventListener("DOMContentLoaded", () => {
       localStorage.removeItem("tasks"); // Clear tasks from localStorage
       document.getElementById("auth").style.display = "block";
       document.getElementById("tasks").style.display = "none";
+      document.getElementById("signout").style.display = "none";
       window.location.reload();
     }
   }
@@ -259,7 +291,6 @@ document.addEventListener("DOMContentLoaded", () => {
       data: { session },
       error,
     } = await supabase.auth.getSession();
-
     if (error) {
       console.error("Error getting session:", error);
       document.getElementById("auth").style.display = "none";
@@ -282,12 +313,12 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("tasks").style.display = "block";
       document.getElementById("signout").style.display = "block";
       await syncLocalTasks();
-      fetchTasks();
+      await fetchTasks();
     } else {
       document.getElementById("auth").style.display = "block";
       document.getElementById("tasks").style.display = "block";
       document.getElementById("signout").style.display = "none";
-      fetchTasks();
+      await fetchTasks();
     }
   }
 
@@ -303,7 +334,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
   checkAuth();
-
   window.signInWithGoogle = signInWithGoogle;
   window.signOut = signOut;
 });
