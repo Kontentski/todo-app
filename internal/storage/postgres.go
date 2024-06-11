@@ -8,6 +8,7 @@ import (
 	_ "github.com/lib/pq"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 )
 
 type PostgresStore struct {
@@ -15,10 +16,20 @@ type PostgresStore struct {
 }
 
 func NewPostgresStorage(connectionString string) (*PostgresStore, error) {
-	db, err := gorm.Open(postgres.Open(connectionString), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(connectionString), &gorm.Config{
+		NamingStrategy: schema.NamingStrategy{
+			TablePrefix:   "",    // schema name
+			SingularTable: false, // use singular table name, struct `User` -> table `user`
+		},
+	})
 	if err != nil {
 		return nil, err
 	}
+
+	// Log current tables
+	var tables []string
+	db.Raw("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'").Scan(&tables)
+	log.Println("Current tables in the database:", tables)
 	err = db.AutoMigrate(&models.Todo{})
 	if err != nil {
 		return nil, err
@@ -35,13 +46,13 @@ func (s *PostgresStore) Create(todo models.Todo) models.Todo {
 
 func (s *PostgresStore) GetAll() []models.Todo {
 	var todos []models.Todo
-	s.DB.Find(&todos)
+	s.DB.Order("created_at asc").Find(&todos)
 	return todos
 }
 
 func (s *PostgresStore) GetByUserID(userID string) []models.Todo {
 	var todos []models.Todo
-	s.DB.Where("user_id = ?", userID).Find(&todos)
+	s.DB.Where("user_id = ?", userID).Order("created_at asc").Find(&todos)
 	return todos
 }
 
@@ -64,7 +75,7 @@ func (s *PostgresStore) GetByIDAndUserID(id int64, userID string) (*models.Todo,
 }
 
 func (s *PostgresStore) Update(id int64, updated models.Todo, userID string) error {
-	result := s.DB.Model(&models.Todo{}).Select("title","complete").Where("id = ? AND user_id = ?", id, userID).Updates(updated)
+	result := s.DB.Model(&models.Todo{}).Select("title", "complete").Where("id = ? AND user_id = ?", id, userID).Updates(updated)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -84,4 +95,3 @@ func (s *PostgresStore) Delete(id int64, userID string) error {
 	}
 	return nil
 }
-
