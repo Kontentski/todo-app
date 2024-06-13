@@ -7,12 +7,10 @@
     <link rel="stylesheet" type="text/css" href="style.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <script src="app.js" defer></script>
-
-
   </head>
   <body>
-      <h1>Todo list</h1>
-      
+    <h1>Todo list</h1>
+
     <div id="tasks" style="display: none">
       <form id="create-task-form" class="form">
         <input
@@ -23,20 +21,24 @@
         />
         <button type="submit">Create Task</button>
       </form>
+
+      <button id="delete-checked-btn" onclick="deleteChecked()">
+        Delete Checked
+      </button>
       <ul id="task-list" class="list"></ul>
-      
+
       <footer>
         <div id="auth" style="display: none">
-        <img
-          id="sign-in-image"
-          src="login.svg"
-          alt="Sign In"
-          onclick="signInWithGoogle()"
-        />
-      </div>
-      <div id="signout"  style="display: none">
-        <button class="signoutbtn" onclick="signOut()">Sign Out</button>
-      </div>
+          <img
+            id="sign-in-image"
+            src="login.svg"
+            alt="Sign In"
+            onclick="signInWithGoogle()"
+          />
+        </div>
+        <div id="signout" style="display: none">
+          <button class="signoutbtn" onclick="signOut()">Sign Out</button>
+        </div>
       </footer>
     </div>
   </body>

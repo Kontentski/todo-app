@@ -77,6 +77,7 @@ func main() {
 	api.POST("/tasks", handler.CreateTask)
 	api.PUT("/tasks/:id", handler.UpdateTask)
 	api.DELETE("/tasks/:id", handler.DeleteTask)
+	api.DELETE("/tasks/delete-checked", handler.DeleteCheckedTasks)
 
 	log.Fatal(e.Start(":8080"))
 }
