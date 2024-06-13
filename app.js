@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
   const supabaseUrl = "https://mkfqpkulqicuhpawsmsk.supabase.co";
-  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rZnFwa3VscWljdWhwYXdzbXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTY5ODA5ODksImV4cCI6MjAzMjU1Njk4OX0.J3OhpYNObgzHAliz9pQhsOzH0k-lS6cm0qFfzkqGXOg";
+  const supabaseKey =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rZnFwa3VscWljdWhwYXdzbXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTY5ODA5ODksImV4cCI6MjAzMjU1Njk4OX0.J3OhpYNObgzHAliz9pQhsOzH0k-lS6cm0qFfzkqGXOg";
   const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
   console.log("DOM fully loaded and parsed");
@@ -34,6 +35,14 @@ document.addEventListener("DOMContentLoaded", () => {
       if (response.ok) {
         const tasks = await response.json();
         renderTasks(tasks);
+        const completedTasks = tasks.filter((task) => task.complete);
+        if (completedTasks.length > 1) {
+          document.getElementById("delete-checked-btn").style.display =
+            "block";
+        } else {
+          document.getElementById("delete-checked-btn").style.display =
+            "none";
+        }
       } else if (response.status === 401) {
         console.error("Token is expired");
         await handleTokenRefresh();
@@ -68,24 +77,41 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const taskTitle = document.createElement("span");
       taskTitle.className = "task-title";
+      taskTitle.contentEditable = true; // Make task title editable
       taskTitle.textContent = task.title;
+
+      let originalTitle = task.title;
+
+      taskTitle.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          taskTitle.textContent = originalTitle; // Revert to original title
+          taskTitle.blur(); // Stop editing
+        } else if (event.key === "Enter") {
+          if (!event.shiftKey) {
+            event.preventDefault(); // Prevent new line
+            taskTitle.blur(); // Trigger blur event to save changes
+          }
+        }
+      });
+
+      // Save changes when editing is finished (on blur event)
+      taskTitle.addEventListener("blur", () => {
+        const trimmedTitle = taskTitle.textContent.trim();
+        if (trimmedTitle !== originalTitle) {
+          updateTask(task.id, { title: trimmedTitle });
+          originalTitle = trimmedTitle; // Update the original title
+        }
+      });
 
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
       checkbox.checked = task.complete;
       checkbox.addEventListener("change", () => {
-        updateTaskCompletion(task.id, task.title, checkbox.checked);
+        updateTask(task.id, { complete: checkbox.checked });
       });
 
       const taskActions = document.createElement("div");
       taskActions.className = "task-actions";
-
-      const editButton = document.createElement("button");
-      editButton.className = "task-button edit";
-      editButton.textContent = "";
-      editButton.addEventListener("click", () => {
-        editTask(task.id, task.title);
-      });
 
       const deleteButton = document.createElement("button");
       deleteButton.className = "task-button delete";
@@ -94,7 +120,6 @@ document.addEventListener("DOMContentLoaded", () => {
         deleteTask(task.id);
       });
 
-      taskActions.appendChild(editButton);
       taskActions.appendChild(deleteButton);
 
       listItem.appendChild(checkbox);
@@ -111,7 +136,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const id = IDgenerator();
       tasks.push({ id, title, complete });
       localStorage.setItem("tasks", JSON.stringify(tasks));
-      fetchTasks(); 
+      fetchTasks();
       return;
     }
 
@@ -139,75 +164,54 @@ document.addEventListener("DOMContentLoaded", () => {
     return Date.now().toString(16) + Math.random().toString(16);
   }
 
-  async function updateTaskCompletion(id, title, complete) {
+  async function updateTask(id, updatedFields) {
     const token = localStorage.getItem("token");
     if (!token) {
       let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
       const index = tasks.findIndex((task) => task.id === id);
       if (index !== -1) {
-        tasks[index].complete = complete;
+        tasks[index] = { ...tasks[index], ...updatedFields };
         localStorage.setItem("tasks", JSON.stringify(tasks));
-        fetchTasks(); // Refresh the task list after updating the task
+        fetchTasks(); // Update the task list in the UI
       }
       return;
     }
-  
+
     try {
-      const response = await fetch(`/api/tasks/${id}`, {
-        method: "PUT",
+      // Fetch the current task to preserve other fields
+      const responseGet = await fetch(`/api/tasks/${id}`, {
+        method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ title, complete }),
       });
-  
-      if (!response.ok) {
-        console.error("Error updating task:", await response.text());
+
+      if (responseGet.ok) {
+        const existingTask = await responseGet.json();
+        const updatedTask = { ...existingTask, ...updatedFields };
+
+        const responseUpdate = await fetch(`/api/tasks/${id}`, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updatedTask),
+        });
+
+        if (responseUpdate.ok) {
+          fetchTasks(); // Update the task list in the UI
+        } else {
+          console.error("Error updating task:", await responseUpdate.text());
+        }
       } else {
-        fetchTasks(); // Refresh the task list after updating the task
+        console.error(
+          "Error fetching existing task:",
+          await responseGet.text()
+        );
       }
     } catch (error) {
       console.error("Update task error:", error);
-    }
-  }
-
-  async function editTask(id, oldTitle) {
-    const newTitle = prompt("Edit task title:", oldTitle);
-    if (newTitle === null || newTitle.trim() === "") {
-      return; // User cancelled or didn't enter a new title
-    }
-
-    const token = localStorage.getItem("token");
-    if (!token) {
-      let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
-      const index = tasks.findIndex((task) => task.id === id);
-      if (index !== -1) {
-        tasks[index].title = newTitle;
-        localStorage.setItem("tasks", JSON.stringify(tasks));
-      }
-      fetchTasks();
-
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/tasks/${id}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ title: newTitle }),
-      });
-
-      if (response.ok) {
-        fetchTasks(); // Refresh the task list after editing the task
-      } else {
-        console.error("Error editing task:", await response.text());
-      }
-    } catch (error) {
-      console.error("Edit task error:", error);
     }
   }
 
@@ -237,6 +241,32 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (error) {
       console.error("Delete task error:", error);
+    }
+  }
+
+  async function deleteChecked() {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("User not authenticated");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/tasks/delete-checked", {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText);
+      }
+      fetchTasks(); // Update the task list in the UI
+    } catch (error) {
+      console.error("Error deleting checked tasks:", error);
+      alert("Failed to delete checked tasks: " + error.message);
     }
   }
 
@@ -330,10 +360,12 @@ document.addEventListener("DOMContentLoaded", () => {
       if (title) {
         await createTask(title);
         document.getElementById("new-task-title").value = "";
+        document.getElementById("new-task-title").blur();
       }
     });
 
   checkAuth();
   window.signInWithGoogle = signInWithGoogle;
   window.signOut = signOut;
+  window.deleteChecked = deleteChecked;
 });

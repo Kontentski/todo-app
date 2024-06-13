@@ -72,3 +72,12 @@ func (h *TodoHandler) DeleteTask(c echo.Context) error {
 	}
 	return c.NoContent(http.StatusNoContent)
 }
+
+func (h *TodoHandler) DeleteCheckedTasks(c echo.Context) error {
+	userID := c.Get("user_id").(string)
+    err := h.Storage.DeleteChecked(userID)
+    if err!= nil {
+        return c.JSON(http.StatusNotFound, err.Error())
+    }
+    return c.NoContent(http.StatusNoContent)
+}

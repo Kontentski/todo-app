@@ -16,27 +16,22 @@ type PostgresStore struct {
 }
 
 func NewPostgresStorage(connectionString string) (*PostgresStore, error) {
-	db, err := gorm.Open(postgres.Open(connectionString), &gorm.Config{
-		NamingStrategy: schema.NamingStrategy{
-			TablePrefix:   "",    // schema name
-			SingularTable: false, // use singular table name, struct `User` -> table `user`
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
+    db, err := gorm.Open(postgres.Open(connectionString), &gorm.Config{
+        NamingStrategy: schema.NamingStrategy{
+            TablePrefix:   "",    // schema name
+            SingularTable: false, // use singular table name, struct `User` -> table `user`
+        },
+    })
+    if err != nil {
+        return nil, err
+    }
 
-	// Log current tables
-	var tables []string
-	db.Raw("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'").Scan(&tables)
-	log.Println("Current tables in the database:", tables)
-	err = db.AutoMigrate(&models.Todo{})
-	if err != nil {
-		return nil, err
-	}
+    // var tables []string
+    // db.Raw("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'").Scan(&tables)
+    // log.Println("Current tables in the database:", tables)
 
-	log.Println("Database connection and migration successful")
-	return &PostgresStore{DB: db}, nil
+    log.Println("Database connection successful")
+    return &PostgresStore{DB: db}, nil
 }
 
 func (s *PostgresStore) Create(todo models.Todo) models.Todo {
@@ -94,4 +89,15 @@ func (s *PostgresStore) Delete(id int64, userID string) error {
 		return errors.New("task not found or not authorized")
 	}
 	return nil
+}
+
+func (s *PostgresStore) DeleteChecked(userId string) error {
+	result := s.DB.Where("complete = true AND user_id =?", userId).Delete(&models.Todo{})
+    if result.Error!= nil {
+        return result.Error
+    }
+    if result.RowsAffected == 0 {
+        return errors.New("task not found or not authorized")
+    }
+    return nil
 }

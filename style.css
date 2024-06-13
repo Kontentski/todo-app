@@ -11,8 +11,7 @@ body {
   flex-direction: column;
   align-items: center;
   width: 100%;
-  scrollbar-width: 1px; 
-
+  scrollbar-width: 1px;
 }
 
 body::-webkit-scrollbar {
@@ -35,6 +34,7 @@ h1 {
   margin: 20px auto;
   width: 100%;
   max-width: 600px;
+  white-space: pre-wrap;
 }
 
 #new-task-title {
@@ -75,6 +75,7 @@ h1 {
   padding: 0;
   list-style-type: none;
   margin: 0 auto;
+  white-space: pre-wrap;
 }
 
 #task-list {
@@ -189,7 +190,6 @@ h1 {
   border-color: transparent;
 }
 
-
 .signoutbtn {
   display: inline-flex;
   align-items: center;
@@ -205,7 +205,6 @@ h1 {
   box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.2);
   padding: 12px;
   transition: background-color 0.3s ease;
-
 }
 
 footer {
@@ -226,33 +225,26 @@ footer {
 }
 
 @media only screen and (max-width: 600px) {
+  .body {
+    height: 100vh;
+  }
+
   h1 {
     font-size: 50px;
   }
-
+  #task-list li span {
+    font-size: 18px;
+  }
   .form {
-    flex-direction: column;
-  }
-
-  #new-task-title,
-  #create-task-form button {
-    width: 90%;
-    max-width: none;
-    border-radius: 25px;
-    margin-bottom: 10px;
-  }
-
-  #create-task-form button {
-    border-radius: 25px;
-  }
-
-  #task-list li {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  #task-list li .task-actions {
+    display: flex;
+    max-width: 80%;
     width: 100%;
-    justify-content: flex-start;
+  }
+
+  #task-list {
+    padding: 0 10px;
+    min-width: 0;
+    max-width: 80%;
+    width: 100%;
   }
 }
