@@ -29,7 +29,6 @@ func main() {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
-
 	e.Static("/", "../../")
 
 	// JWT Auth middleware for API routes
@@ -58,11 +57,22 @@ func main() {
 			}
 
 			if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-				// Check token expiration and refresh if necessary
+				// Check token expiration
 				if int64(claims["exp"].(float64)) < time.Now().Unix() {
 					return c.JSON(http.StatusUnauthorized, "token expired")
 				}
 				c.Set("user_id", claims["sub"])
+				userMetadata, ok := claims["user_metadata"].(map[string]interface{})
+				if !ok {
+					return c.JSON(http.StatusUnauthorized, "user_metadata missing in token")
+				}
+
+				if name, ok := userMetadata["name"].(string); ok {
+					c.Set("name", name)
+				} else {
+					return c.JSON(http.StatusUnauthorized, "name claim missing in user_metadata")
+				}
+
 			} else {
 				return c.JSON(http.StatusUnauthorized, "invalid token")
 			}

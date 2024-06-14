@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -15,6 +16,9 @@ type TodoHandler struct {
 
 func (h *TodoHandler) GetTasks(c echo.Context) error {
 	userID := c.Get("user_id").(string)
+	UserName := c.Get("name").(string)
+	fmt.Printf("User ID: %s, User Name: %s\n", userID, UserName)
+
 	todos := h.Storage.GetByUserID(userID)
 	return c.JSON(http.StatusOK, todos)
 }
@@ -37,8 +41,25 @@ func (h *TodoHandler) CreateTask(c echo.Context) error {
 	if err := c.Bind(&todo); err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
-	todo.UserID = c.Get("user_id").(string)
-	createdTask := h.Storage.Create(todo)
+
+	userID, ok := c.Get("user_id").(string)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, "missing user_id in token")
+	}
+
+	userName, ok := c.Get("name").(string)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, "missing user_name in token")
+	}
+
+	todo.UserID = userID
+	todo.UserName = userName
+
+	createdTask, err := h.Storage.Create(todo)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, err.Error())
+	}
+
 	return c.JSON(http.StatusCreated, createdTask)
 }
 
@@ -75,9 +96,9 @@ func (h *TodoHandler) DeleteTask(c echo.Context) error {
 
 func (h *TodoHandler) DeleteCheckedTasks(c echo.Context) error {
 	userID := c.Get("user_id").(string)
-    err := h.Storage.DeleteChecked(userID)
-    if err!= nil {
-        return c.JSON(http.StatusNotFound, err.Error())
-    }
-    return c.NoContent(http.StatusNoContent)
+	err := h.Storage.DeleteChecked(userID)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, err.Error())
+	}
+	return c.NoContent(http.StatusNoContent)
 }

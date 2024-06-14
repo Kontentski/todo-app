@@ -61,9 +61,22 @@ h1 {
   transition: background-color 1s, box-shadow 0.3s;
 }
 
-#create-task-form button:hover {
+#create-task-form button:hover,
+#delete-checked-btn:hover,
+.task-button:hover {
   background-color: #ffe6e3;
   box-shadow: 0 0 10px #f6d7d2;
+  transition: background-color 1s, box-shadow 0.3s;
+}
+
+#delete-checked-btn {
+  font-weight: 600;
+  background-color: #a0a0a0;
+  border: 1px solid #3c3939;
+  border-radius: 25px 25px;
+  padding: 5px 10px;
+  transition: background-color 1s, box-shadow 0.3s;
+
 }
 
 .list {
@@ -84,7 +97,7 @@ h1 {
   list-style-type: none;
   margin: 0 auto;
   color: #e2b1a9;
-  margin-bottom: 100px;
+  margin-bottom: 10px;
 }
 
 #task-list li {
@@ -165,21 +178,6 @@ h1 {
   transition: background-color 1s, box-shadow 0.3s;
 }
 
-.task-button:hover {
-  background-color: #ffe6e3;
-  box-shadow: 0 0 10px #f6d7d2;
-}
-
-.task-button.edit {
-  background-image: url(edit.svg);
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 28px 20px;
-  padding: 14px;
-  border-radius: 50%;
-  border-color: transparent;
-}
-
 .task-button.delete {
   background-image: url(delete.svg);
   background-position: center;
@@ -189,7 +187,9 @@ h1 {
   border-radius: 50%;
   border-color: transparent;
 }
-
+.empty-bottom {
+  margin-bottom: 100px;
+}
 .signoutbtn {
   display: inline-flex;
   align-items: center;
@@ -239,6 +239,12 @@ footer {
     display: flex;
     max-width: 80%;
     width: 100%;
+  }
+  #delete-checked-btn {
+    margin: 10px 10% 100px 10%;
+  }
+  #create-task-form button{
+padding: 10px 10px;
   }
 
   #task-list {

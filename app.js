@@ -23,6 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
       console.log("No token found, fetching local tasks");
       let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
       renderTasks(tasks);
+      toggleDeleteCheckedButton(tasks);
       return;
     }
 
@@ -35,14 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (response.ok) {
         const tasks = await response.json();
         renderTasks(tasks);
-        const completedTasks = tasks.filter((task) => task.complete);
-        if (completedTasks.length > 1) {
-          document.getElementById("delete-checked-btn").style.display =
-            "block";
-        } else {
-          document.getElementById("delete-checked-btn").style.display =
-            "none";
-        }
+        toggleDeleteCheckedButton(tasks);
       } else if (response.status === 401) {
         console.error("Token is expired");
         await handleTokenRefresh();
@@ -51,6 +45,16 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (error) {
       console.error("Fetch tasks error:", error);
+    }
+  }
+
+  function toggleDeleteCheckedButton(tasks) {
+    const completedTasks = tasks.filter((task) => task.complete);
+    const deleteCheckedButton = document.getElementById("delete-checked-btn");
+    if (completedTasks.length > 1) {
+      deleteCheckedButton.style.display = "block";
+    } else {
+      deleteCheckedButton.style.display = "none";
     }
   }
 
@@ -247,7 +251,12 @@ document.addEventListener("DOMContentLoaded", () => {
   async function deleteChecked() {
     const token = localStorage.getItem("token");
     if (!token) {
-      alert("User not authenticated");
+      let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+      const filteredTasks = tasks.filter((task) => !task.complete);
+      localStorage.setItem("tasks", JSON.stringify(filteredTasks));
+
+      fetchTasks();
+      toggleDeleteCheckedButton(filteredTasks); 
       return;
     }
 
