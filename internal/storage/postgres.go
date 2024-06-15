@@ -34,10 +34,14 @@ func NewPostgresStorage(connectionString string) (*PostgresStore, error) {
     return &PostgresStore{DB: db}, nil
 }
 
-func (s *PostgresStore) Create(todo models.Todo) models.Todo {
-	s.DB.Create(&todo)
-	return todo
+func (s *PostgresStore) Create(todo models.Todo) (*models.Todo, error) {
+    if err := s.DB.Create(&todo).Error; err != nil {
+        log.Printf("Error creating todo: %v", err)
+        return nil, err
+    }
+    return &todo, nil
 }
+
 
 func (s *PostgresStore) GetAll() []models.Todo {
 	var todos []models.Todo
