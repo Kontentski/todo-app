@@ -36,7 +36,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (response.ok) {
         const tasks = await response.json();
         renderTasks(tasks);
+        
+        localStorage.setItem("tasks", JSON.stringify(tasks));
         toggleDeleteCheckedButton(tasks);
+
       } else if (response.status === 401) {
         console.error("Token is expired");
         await handleTokenRefresh();
@@ -135,12 +138,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function createTask(title, complete = false) {
     const token = localStorage.getItem("token");
+    const tempId = IDgenerator();
+    const newTask = { id: tempId, title, complete };
+
+    let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+    tasks.push(newTask);
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+    renderTasks(tasks);
+
     if (!token) {
-      let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
-      const id = IDgenerator();
-      tasks.push({ id, title, complete });
-      localStorage.setItem("tasks", JSON.stringify(tasks));
-      fetchTasks();
       return;
     }
 
@@ -155,7 +161,16 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       if (response.ok) {
-        fetchTasks();
+        const createdTask = await response.json();
+
+        tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+        const taskIndex = tasks.findIndex((task) => task.id === tempId);
+        if (taskIndex !== -1) {
+          tasks[taskIndex] = { ...tasks[taskIndex], id: createdTask.id };
+          localStorage.setItem("tasks", JSON.stringify(tasks));
+          renderTasks(tasks);
+          fetchTasks(); 
+        }
       } else {
         console.error("Error creating task:", await response.text());
       }
@@ -165,68 +180,69 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function IDgenerator() {
-    return Date.now().toString(16) + Math.random().toString(16);
+    return "local" + Date.now().toString(16) + Math.random().toString(16);
   }
 
   async function updateTask(id, updatedFields) {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
-      const index = tasks.findIndex((task) => task.id === id);
-      if (index !== -1) {
+    let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+    const index = tasks.findIndex((task) => task.id === id);
+    if (index !== -1) {
         tasks[index] = { ...tasks[index], ...updatedFields };
         localStorage.setItem("tasks", JSON.stringify(tasks));
-        fetchTasks(); // Update the task list in the UI
-      }
-      return;
+        toggleDeleteCheckedButton(tasks);
+        renderTasks(tasks);
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+        return;
     }
 
     try {
-      // Fetch the current task to preserve other fields
-      const responseGet = await fetch(`/api/tasks/${id}`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (responseGet.ok) {
-        const existingTask = await responseGet.json();
-        const updatedTask = { ...existingTask, ...updatedFields };
-
-        const responseUpdate = await fetch(`/api/tasks/${id}`, {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(updatedTask),
+        // Fetch the current task to preserve other fields
+        const responseGet = await fetch(`/api/tasks/${id}`, {
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
         });
 
-        if (responseUpdate.ok) {
-          fetchTasks(); // Update the task list in the UI
+        if (responseGet.ok) {
+            const existingTask = await responseGet.json();
+            const updatedTask = { ...existingTask, ...updatedFields };
+
+            const responseUpdate = await fetch(`/api/tasks/${id}`, {
+                method: "PUT",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(updatedTask),
+            });
+
+            if (responseUpdate.ok) {
+                console.log("Task updated in database successfully");
+            } else {
+                console.error("Error updating task:", await responseUpdate.text());
+            }
         } else {
-          console.error("Error updating task:", await responseUpdate.text());
+            console.error("Error fetching existing task:", await responseGet.text());
         }
-      } else {
-        console.error(
-          "Error fetching existing task:",
-          await responseGet.text()
-        );
-      }
     } catch (error) {
-      console.error("Update task error:", error);
+        console.error("Update task error:", error);
     }
-  }
+}
+
 
   async function deleteTask(id) {
+    // Delete from localStorage immediately
+    let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+    const filteredTasks = tasks.filter((task) => task.id !== id);
+    localStorage.setItem("tasks", JSON.stringify(filteredTasks));
+    renderTasks(filteredTasks); // Update UI immediately
+
     const token = localStorage.getItem("token");
     if (!token) {
-      let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
-      const filteredTasks = tasks.filter((task) => task.id !== id);
-      localStorage.setItem("tasks", JSON.stringify(filteredTasks));
-
-      fetchTasks();
       return;
     }
 
@@ -239,9 +255,12 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       if (response.ok) {
-        fetchTasks();
+        console.log("Task deleted from database successfully");
       } else {
-        console.error("Error deleting task:", await response.text());
+        console.error(
+          "Error deleting task from database:",
+          await response.text()
+        );
       }
     } catch (error) {
       console.error("Delete task error:", error);
@@ -249,14 +268,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function deleteChecked() {
+    let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+    const filteredTasks = tasks.filter((task) => !task.complete);
+    localStorage.setItem("tasks", JSON.stringify(filteredTasks));
+    toggleDeleteCheckedButton(filteredTasks);
+    renderTasks(filteredTasks);
+
     const token = localStorage.getItem("token");
     if (!token) {
-      let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
-      const filteredTasks = tasks.filter((task) => !task.complete);
-      localStorage.setItem("tasks", JSON.stringify(filteredTasks));
-
-      fetchTasks();
-      toggleDeleteCheckedButton(filteredTasks); 
       return;
     }
 
@@ -268,43 +287,55 @@ document.addEventListener("DOMContentLoaded", () => {
         },
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText);
+      if (response.ok) {
+        console.log("Checked tasks deleted from database successfully");
+      } else {
+        console.error(
+          "Error deleting checked tasks from database:",
+          await response.text()
+        );
       }
-      fetchTasks(); // Update the task list in the UI
     } catch (error) {
-      console.error("Error deleting checked tasks:", error);
-      alert("Failed to delete checked tasks: " + error.message);
+      console.error("Delete checked tasks error:", error);
     }
   }
 
   async function syncLocalTasks() {
     const token = localStorage.getItem("token");
     if (!token) return;
-
+  
     let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
     for (let task of tasks) {
-      delete task.id;
-      try {
-        const response = await fetch("/api/tasks", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(task),
-        });
-
-        if (!response.ok) {
-          console.error("Error syncing task:", await response.text());
+      // Ensure task.id is a string before calling startsWith
+      if (typeof task.id === 'string' && task.id.startsWith("local")) {
+        try {
+          const { id, ...taskWithoutId } = task; // Remove the id field
+  
+          const response = await fetch("/api/tasks", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(taskWithoutId),
+          });
+  
+          if (!response.ok) {
+            console.error("Error syncing task:", await response.text());
+          } else {
+            const createdTask = await response.json();
+            // Update local storage with the new task ID
+            task.id = createdTask.id;
+            localStorage.setItem("tasks", JSON.stringify(tasks));
+          }
+        } catch (error) {
+          console.error("Sync task error:", error);
         }
-      } catch (error) {
-        console.error("Sync task error:", error);
       }
     }
-    localStorage.removeItem("tasks");
+    renderTasks(tasks); // Update UI with synchronized tasks
   }
+  
 
   async function signOut() {
     const { error } = await supabase.auth.signOut();
@@ -360,6 +391,17 @@ document.addEventListener("DOMContentLoaded", () => {
       await fetchTasks();
     }
   }
+
+  // Function to handle the beforeunload event
+  function handleBeforeUnload() {
+    const token = localStorage.getItem("token");
+    if (token) {
+      localStorage.removeItem("tasks"); // Clear tasks from localStorage
+    }
+  }
+
+  // Attach an event listener to the beforeunload event
+  window.addEventListener("beforeunload", handleBeforeUnload);
 
   document
     .getElementById("create-task-form")
