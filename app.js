@@ -36,10 +36,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (response.ok) {
         const tasks = await response.json();
         renderTasks(tasks);
-        
+
         localStorage.setItem("tasks", JSON.stringify(tasks));
         toggleDeleteCheckedButton(tasks);
-
       } else if (response.status === 401) {
         console.error("Token is expired");
         await handleTokenRefresh();
@@ -66,12 +65,15 @@ document.addEventListener("DOMContentLoaded", () => {
       data: { session },
       error,
     } = await supabase.auth.refreshSession();
+
     if (error) {
       console.error("Error refreshing session:", error);
       await signOut();
     } else if (session) {
       localStorage.setItem("token", session.access_token);
+      localStorage.setItem("expires_at", session.expires_at);
       await fetchTasks();
+      startTokenRefreshTimer();
     }
   }
 
@@ -84,29 +86,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const taskTitle = document.createElement("span");
       taskTitle.className = "task-title";
-      taskTitle.contentEditable = true; // Make task title editable
+      taskTitle.contentEditable = true;
       taskTitle.textContent = task.title;
 
       let originalTitle = task.title;
 
       taskTitle.addEventListener("keydown", (event) => {
         if (event.key === "Escape") {
-          taskTitle.textContent = originalTitle; // Revert to original title
-          taskTitle.blur(); // Stop editing
+          taskTitle.textContent = originalTitle;
+          taskTitle.blur();
         } else if (event.key === "Enter") {
           if (!event.shiftKey) {
-            event.preventDefault(); // Prevent new line
-            taskTitle.blur(); // Trigger blur event to save changes
+            event.preventDefault();
+            taskTitle.blur();
           }
         }
       });
 
-      // Save changes when editing is finished (on blur event)
       taskTitle.addEventListener("blur", () => {
         const trimmedTitle = taskTitle.textContent.trim();
         if (trimmedTitle !== originalTitle) {
           updateTask(task.id, { title: trimmedTitle });
-          originalTitle = trimmedTitle; // Update the original title
+          originalTitle = trimmedTitle;
         }
       });
 
@@ -169,7 +170,7 @@ document.addEventListener("DOMContentLoaded", () => {
           tasks[taskIndex] = { ...tasks[taskIndex], id: createdTask.id };
           localStorage.setItem("tasks", JSON.stringify(tasks));
           renderTasks(tasks);
-          fetchTasks(); 
+          fetchTasks();
         }
       } else {
         console.error("Error creating task:", await response.text());
@@ -187,59 +188,59 @@ document.addEventListener("DOMContentLoaded", () => {
     let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
     const index = tasks.findIndex((task) => task.id === id);
     if (index !== -1) {
-        tasks[index] = { ...tasks[index], ...updatedFields };
-        localStorage.setItem("tasks", JSON.stringify(tasks));
-        toggleDeleteCheckedButton(tasks);
-        renderTasks(tasks);
+      tasks[index] = { ...tasks[index], ...updatedFields };
+      localStorage.setItem("tasks", JSON.stringify(tasks));
+      toggleDeleteCheckedButton(tasks);
+      renderTasks(tasks);
     }
 
     const token = localStorage.getItem("token");
     if (!token) {
-        return;
+      return;
     }
 
     try {
-        // Fetch the current task to preserve other fields
-        const responseGet = await fetch(`/api/tasks/${id}`, {
-            method: "GET",
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
+      const responseGet = await fetch(`/api/tasks/${id}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (responseGet.ok) {
+        const existingTask = await responseGet.json();
+        const updatedTask = { ...existingTask, ...updatedFields };
+
+        const responseUpdate = await fetch(`/api/tasks/${id}`, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updatedTask),
         });
 
-        if (responseGet.ok) {
-            const existingTask = await responseGet.json();
-            const updatedTask = { ...existingTask, ...updatedFields };
-
-            const responseUpdate = await fetch(`/api/tasks/${id}`, {
-                method: "PUT",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(updatedTask),
-            });
-
-            if (responseUpdate.ok) {
-                console.log("Task updated in database successfully");
-            } else {
-                console.error("Error updating task:", await responseUpdate.text());
-            }
+        if (responseUpdate.ok) {
+          console.log("Task updated in database successfully");
         } else {
-            console.error("Error fetching existing task:", await responseGet.text());
+          console.error("Error updating task:", await responseUpdate.text());
         }
+      } else {
+        console.error(
+          "Error fetching existing task:",
+          await responseGet.text()
+        );
+      }
     } catch (error) {
-        console.error("Update task error:", error);
+      console.error("Update task error:", error);
     }
-}
-
+  }
 
   async function deleteTask(id) {
-    // Delete from localStorage immediately
     let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
     const filteredTasks = tasks.filter((task) => task.id !== id);
     localStorage.setItem("tasks", JSON.stringify(filteredTasks));
-    renderTasks(filteredTasks); // Update UI immediately
+    renderTasks(filteredTasks);
 
     const token = localStorage.getItem("token");
     if (!token) {
@@ -303,14 +304,13 @@ document.addEventListener("DOMContentLoaded", () => {
   async function syncLocalTasks() {
     const token = localStorage.getItem("token");
     if (!token) return;
-  
+
     let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
     for (let task of tasks) {
-      // Ensure task.id is a string before calling startsWith
-      if (typeof task.id === 'string' && task.id.startsWith("local")) {
+      if (typeof task.id === "string" && task.id.startsWith("local")) {
         try {
           const { id, ...taskWithoutId } = task; // Remove the id field
-  
+
           const response = await fetch("/api/tasks", {
             method: "POST",
             headers: {
@@ -319,7 +319,7 @@ document.addEventListener("DOMContentLoaded", () => {
             },
             body: JSON.stringify(taskWithoutId),
           });
-  
+
           if (!response.ok) {
             console.error("Error syncing task:", await response.text());
           } else {
@@ -333,9 +333,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
     }
-    renderTasks(tasks); // Update UI with synchronized tasks
+    renderTasks(tasks);
   }
-  
 
   async function signOut() {
     const { error } = await supabase.auth.signOut();
@@ -347,13 +346,18 @@ document.addEventListener("DOMContentLoaded", () => {
       localStorage.removeItem("expires_at");
       localStorage.removeItem("refresh_token");
       localStorage.removeItem("user");
-      localStorage.removeItem("tasks"); // Clear tasks from localStorage
+      localStorage.removeItem("tasks");
       document.getElementById("auth").style.display = "block";
       document.getElementById("tasks").style.display = "none";
       document.getElementById("signout").style.display = "none";
       window.location.reload();
     }
+    if (tokenRefreshTimer) {
+      clearTimeout(tokenRefreshTimer);
+    }
   }
+
+  let tokenRefreshTimer;
 
   async function checkAuth() {
     console.log("Checking authentication...");
@@ -390,17 +394,33 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("signout").style.display = "none";
       await fetchTasks();
     }
+    startTokenRefreshTimer();
   }
 
-  // Function to handle the beforeunload event
+  function startTokenRefreshTimer() {
+    if (tokenRefreshTimer) {
+      clearTimeout(tokenRefreshTimer);
+    }
+
+    const expiresAt = localStorage.getItem("expires_at");
+    if (!expiresAt) return;
+
+    const currentTime = Math.floor(Date.now() / 1000);
+    const expiresIn = expiresAt - currentTime;
+
+    const refreshTime = (expiresIn - 300) * 1000; // Refresh 5 minutes (300 seconds) before expiration
+    tokenRefreshTimer = setTimeout(async () => {
+      await handleTokenRefresh();
+    }, refreshTime);
+  }
+
   function handleBeforeUnload() {
     const token = localStorage.getItem("token");
     if (token) {
-      localStorage.removeItem("tasks"); // Clear tasks from localStorage
+      localStorage.removeItem("tasks");
     }
   }
 
-  // Attach an event listener to the beforeunload event
   window.addEventListener("beforeunload", handleBeforeUnload);
 
   document
