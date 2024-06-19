@@ -29,7 +29,7 @@ func main() {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
-	e.Static("/", "../../")
+	e.Static("/", "../../www/")
 
 	// JWT Auth middleware for API routes
 	api := e.Group("/api")
@@ -89,5 +89,11 @@ func main() {
 	api.DELETE("/tasks/:id", handler.DeleteTask)
 	api.DELETE("/tasks/delete-checked", handler.DeleteCheckedTasks)
 
-	log.Fatal(e.Start(":8080"))
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // Default port if not specified
+	}
+
+	// Start server
+	log.Fatal(e.Start(":" + port))
 }
