@@ -9,7 +9,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -tags netgo -ldflags "-extldflags '-static
 FROM alpine:latest
 
 COPY --from=builder /bin/todoapp /bin/todoapp
-COPY index.html style.css app.js delete.svg /www/
+COPY index.html style.css app.js delete.svg login.svg /www/
 EXPOSE 8080
 
 CMD ["/bin/todoapp"]
