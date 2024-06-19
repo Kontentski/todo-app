@@ -16,7 +16,10 @@ type PostgresStore struct {
 }
 
 func NewPostgresStorage(connectionString string) (*PostgresStore, error) {
-    db, err := gorm.Open(postgres.Open(connectionString), &gorm.Config{
+	db, err := gorm.Open(postgres.New(postgres.Config{
+		DSN:                  connectionString,
+		PreferSimpleProtocol: true, // Use simple protocol, avoiding prepared statements
+	}), &gorm.Config{
         NamingStrategy: schema.NamingStrategy{
             TablePrefix:   "",    // schema name
             SingularTable: false, // use singular table name, struct `User` -> table `user`
@@ -25,10 +28,6 @@ func NewPostgresStorage(connectionString string) (*PostgresStore, error) {
     if err != nil {
         return nil, err
     }
-
-    // var tables []string
-    // db.Raw("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'").Scan(&tables)
-    // log.Println("Current tables in the database:", tables)
 
     log.Println("Database connection successful")
     return &PostgresStore{DB: db}, nil
