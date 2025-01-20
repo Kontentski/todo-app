@@ -28,7 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const response = await fetch("/api/tasks", {
+      const response = await fetch("/api/v2/tasks", {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -152,7 +152,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const response = await fetch("/api/tasks", {
+      const response = await fetch("/api/v2/tasks", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -200,7 +200,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const responseGet = await fetch(`/api/tasks/${id}`, {
+      const responseGet = await fetch(`/api/v2/tasks/${id}`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -211,7 +211,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const existingTask = await responseGet.json();
         const updatedTask = { ...existingTask, ...updatedFields };
 
-        const responseUpdate = await fetch(`/api/tasks/${id}`, {
+        const responseUpdate = await fetch(`/api/v2/tasks/${id}`, {
           method: "PUT",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -248,7 +248,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const response = await fetch(`/api/tasks/${id}`, {
+      const response = await fetch(`/api/v2/tasks/${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -281,7 +281,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const response = await fetch("/api/tasks/delete-checked", {
+      const response = await fetch("/api/v2/tasks/delete-checked", {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -311,7 +311,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
           const { id, ...taskWithoutId } = task; // Remove the id field
 
-          const response = await fetch("/api/tasks", {
+          const response = await fetch("/api/v2/tasks", {
             method: "POST",
             headers: {
               Authorization: `Bearer ${token}`,
